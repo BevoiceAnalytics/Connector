@@ -1,35 +1,32 @@
 "use strict";
 
 const https = require("https");
-let bconfig = require("./bevoice.config");
-let { analytics } = require("./config");
 
 class BevoiceAnalytics {
-  config = {
-    key: null,
-  };
+  convObject = { request: string, response: string, ApiKey: string };
 
-  constructor() {
-    if (analytics.BevoiceAnalytics) {
-      this.config = { ...this.config, ...analytics.BevoiceAnalytics };
-    } else if (bconfig) {
-      this.config = { ...this.config, ...bconfig };
-    } else {
-      console.error("BevoiceAnalytics error :: config is missing");
-    }
-  }
+  constructor() {}
 
+  /**
+   * Tracker whose function is to register the original request of your voice assistant in your Bevoice Analytics account.
+   * @param {{ ApiKey: string, request: string, response: string | null }} convObject
+   * @returns
+   */
   async track(convObject) {
-    if (!convObject.$request) {
+    if (!convObject.ApiKey) {
+      console.error("BevoiceAnalytics error :: API Key is missing");
+      return;
+    }
+    if (!convObject.request) {
       console.error("BevoiceAnalytics error :: payload is missing");
       return;
     }
 
     const obj = {
-      request: convObject.$request || null,
-      response: convObject.$response || null,
+      request: convObject.request,
+      response: convObject.response || null,
       type: "Alexa",
-      ApiKey: this.config.key,
+      ApiKey: convObject.ApiKey,
       requestTime: new Date().toISOString(),
     };
 

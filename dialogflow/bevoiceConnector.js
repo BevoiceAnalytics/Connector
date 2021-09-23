@@ -1,48 +1,42 @@
 "use strict";
 
 const https = require("https");
-let bconfig = require("./bevoice.config");
-let { analytics } = require("./config");
 
 class BevoiceAnalytics {
-  config = {
-    key: null,
-  };
+  convObject = { request: string, response: string, ApiKey: string };
 
-  constructor() {
-    if (analytics.BevoiceAnalytics) {
-      this.config = { ...this.config, ...analytics.BevoiceAnalytics };
-    } else if (bconfig) {
-      this.config = { ...this.config, ...bconfig };
-    } else {
-      console.error("BevoiceAnalytics error :: config is missing");
-    }
-  }
+  constructor() {}
 
+  /**
+   * Tracker whose function is to register the original request of your voice assistant in your Bevoice Analytics account.
+   * @param {{ ApiKey: string, request: string, response: string | null }} convObject
+   * @returns
+   */
   async track(convObject) {
-    if (!convObject.$request) {
+    if (!convObject.ApiKey) {
+      console.error("BevoiceAnalytics error :: API Key is missing");
+      return;
+    }
+    if (!convObject.request) {
       console.error("BevoiceAnalytics error :: payload is missing");
       return;
     }
 
-    const requestObj = convObject.$request || null;
-    const responseObj = convObject.$response || null;
-
     //Avoiding health check requests
-    const payload = requestObj.originalDetectIntentRequest.payload;
+    const payload = convObject.request.originalDetectIntentRequest.payload;
     let userProfile = payload.user.profile || undefined;
     let isHealthCheck = userProfile ? userProfile.familyName === "Crawler" : false;
     if (isHealthCheck) return;
 
     const obj = {
-      request: requestObj,
-      response: responseObj,
+      request: convObject.request,
+      response: convObject.response || null,
       type: "Dialogflow",
-      ApiKey: this.config.key,
+      ApiKey: convObject.ApiKey,
       requestTime: new Date().toISOString(),
     };
 
-    await this.post({ body: JSON.stringify(obj) })
+    await this._post({ body: JSON.stringify(obj) })
       .then((response) => {
         if (response.data.response == "API key not found") {
           console.log("Bevoice error :: API key not found");
@@ -54,7 +48,7 @@ class BevoiceAnalytics {
       });
   }
 
-  async post(data) {
+  async _post(data) {
     const dataReady = JSON.stringify(data);
     const options = {
       protocol: "https:",
